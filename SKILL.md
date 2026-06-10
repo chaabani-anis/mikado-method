@@ -130,7 +130,8 @@ Add them to the tree as nodes immediately.
 
 ### Naive attempt procedure
 
-1. Create `docs/mikado/<goal>.mikado.md` with root only.
+1. Create `docs/mikado/<goal>.mikado.md` with root only (graph wrapped in a ` ```text ` fence —
+   see Dependency Tree Format).
 2. `git add docs/mikado/<goal>.mikado.md && git commit -m "mikado-graph: initial graph for <goal> (root only)"`
    — commit immediately so `git checkout -- .` cannot delete the file.
 3. Note current HEAD SHA: `git rev-parse HEAD` — this is `discovered-by` for all nodes this cycle.
@@ -170,6 +171,10 @@ Add them to the tree as nodes immediately.
 ## Dependency Tree Format
 
 **Location:** `docs/mikado/<goal-name>.mikado.md`
+
+Inside the `.mikado.md` file, wrap the graph in a ` ```text ` fenced block. Without the fence,
+GitHub's Markdown preview merges consecutive lines into one paragraph and the `│ ` rails — the
+tree structure — are lost. The validator parses line by line and ignores fence and prose lines.
 
 ```text
 [ ] Goal: [business-value statement]            ← root: no rail, no {Nid}
