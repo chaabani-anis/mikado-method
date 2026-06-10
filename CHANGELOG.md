@@ -5,6 +5,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/). Versioning: [SemVer](ht
 — MAJOR: breaks existing graphs or the validator contract · MINOR: new rules, sections, or checks
 · PATCH: doc fixes and rewording.
 
+## [1.1.0] - 2026-06-10
+
+### Added
+- `validate-mikado.sh --no-git` — skips the git-history checks (discovered-by commit
+  existence/message, parent-child ancestry) for fixtures and format examples with fictional
+  SHAs. Structural passes (parsing, traceability annotations, requires resolution, cycle
+  detection, orphans) still run. Never use it on a real graph.
+
+### Changed
+- Graphs inside `.mikado.md` files are now wrapped in a fenced ` ```text ` block so GitHub's
+  Markdown preview renders the rails verbatim instead of collapsing the tree into one
+  paragraph. The validator ignores fence and prose lines. (Shipped in commit `7bf0e87`.)
+- `install.sh` smoke test now asserts the validator's real exit code on the bundled sample
+  (via `--no-git`) instead of grepping for "Root node found".
+
 ## [1.0.0] - 2026-06-09
 
 ### Added

@@ -91,10 +91,9 @@ copy_with_substitution() {  # $1 = src file, $2 = dest file, $3 = SKILL_DIR valu
 }
 
 smoke_test() {  # $1 = installed validate-mikado.sh, $2 = installed sample
-  local out
-  out=$(bash "$1" "$2" 2>&1 || true)
-  echo "$out" | grep -q "Root node found" || err "smoke test failed: validator did not parse the sample"
-  info "smoke test OK (validator parses the bundled sample)"
+  # --no-git: the sample's discovered-by SHAs are fictional; structural passes still run.
+  bash "$1" --no-git "$2" >/dev/null 2>&1 || err "smoke test failed: validator rejected the bundled sample"
+  info "smoke test OK (validator accepts the bundled sample)"
 }
 
 # -------------------------------------------------------

@@ -1,8 +1,10 @@
 # Mikado Sample — validate-mikado.sh fixture
 
-Minimal valid graph used to test `validate-mikado.sh`.
+Minimal valid graph used to test `validate-mikado.sh`. The `discovered-by`
+SHAs are fictional, so the git-history checks must be skipped with `--no-git`
+(never use that flag on a real graph).
 
-Run: `bash {{SKILL_DIR}}/validate-mikado.sh {{SKILL_DIR}}/sample.mikado.md`
+Run: `bash {{SKILL_DIR}}/validate-mikado.sh --no-git {{SKILL_DIR}}/sample.mikado.md` — expected exit 0.
 
 The graph is wrapped in a fenced block so GitHub renders it verbatim; the
 validator ignores fence and prose lines.

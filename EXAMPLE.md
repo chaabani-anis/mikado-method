@@ -159,7 +159,8 @@ No new nodes emerge from further attempts — exploration is complete, tree is s
 
 ```bash
 bash {{SKILL_DIR}}/validate-mikado.sh docs/mikado/notification-gateway.mikado.md
-# Smoke test with bundled sample: bash {{SKILL_DIR}}/validate-mikado.sh {{SKILL_DIR}}/sample.mikado.md
+# Smoke test with bundled sample (fictional SHAs, hence --no-git):
+#   bash {{SKILL_DIR}}/validate-mikado.sh --no-git {{SKILL_DIR}}/sample.mikado.md
 ```
 
 Expected: all nodes have `discovered-by` + `parent-error`, all `requires:` IDs resolve,

@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 # validate-mikado.sh — Mandatory gate before Execution Mode and before every leaf commit
-# Usage: bash validate-mikado.sh docs/mikado/<goal>.mikado.md
+# Usage: bash validate-mikado.sh [--no-git] docs/mikado/<goal>.mikado.md
 # Exit 0 = graph valid  |  Exit 1 = defects found, fix before continuing
+#
+# --no-git: skip checks that need the repo's git history (discovered-by commit
+# existence/message, parent-child ancestry). For fixtures and format examples
+# whose SHAs are fictional, e.g. the bundled sample.mikado.md. Never use it on
+# a real graph: the git checks are the traceability guarantee.
 #
 # Run this script:
 #   - after every tree-update commit
@@ -12,11 +17,18 @@
 
 set -euo pipefail
 
-TREE_FILE="${1:-}"
+NO_GIT=0
+TREE_FILE=""
+for arg in "$@"; do
+  case "$arg" in
+    --no-git) NO_GIT=1 ;;
+    *) TREE_FILE="$arg" ;;
+  esac
+done
 
 if [[ -z "$TREE_FILE" || ! -f "$TREE_FILE" ]]; then
   echo "ERROR: tree file not found: ${TREE_FILE}" >&2
-  echo "Usage: bash validate-mikado.sh docs/mikado/<goal>.mikado.md" >&2
+  echo "Usage: bash validate-mikado.sh [--no-git] docs/mikado/<goal>.mikado.md" >&2
   exit 1
 fi
 
@@ -167,7 +179,10 @@ while IFS= read -r line; do
   if [[ -n "$CURRENT_NID" ]]; then
     if [[ "$line" =~ \[discovered-by:[[:space:]]*([a-f0-9]{6,40})\] ]]; then
       sha="${BASH_REMATCH[1]}"
-      if git cat-file -e "${sha}" 2>/dev/null; then
+      if [[ $NO_GIT -eq 1 ]]; then
+        echo "$CURRENT_NID" >> "$DISC_FILE"
+        log_ok "{${CURRENT_NID}} discovered-by ${sha:0:7} (git checks skipped: --no-git)"
+      elif git cat-file -e "${sha}" 2>/dev/null; then
         commit_msg=$(git log -1 --format="%s" "${sha}" 2>/dev/null || echo "")
         if [[ "$commit_msg" =~ ^mikado-graph: ]]; then
           echo "$CURRENT_NID" >> "$DISC_FILE"
@@ -295,7 +310,9 @@ echo ""
 # -------------------------------------------------------
 echo "--- Pass 5: Tree direction (child discovered after parent) ---"
 
-if [[ ! -s "$PARENT_CHILD_FILE" ]]; then
+if [[ $NO_GIT -eq 1 ]]; then
+  log_ok "Skipped (--no-git): ancestry checks require git history"
+elif [[ ! -s "$PARENT_CHILD_FILE" ]]; then
   log_ok "No parent-child indentation relationships to check"
 else
   while IFS='|' read -r parent_nid child_nid; do
