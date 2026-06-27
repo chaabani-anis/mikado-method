@@ -128,6 +128,11 @@ grep -r "<new_concept>" tests/ src/
 Hidden fixtures that use the new concept as an "invalid" stand-in are **guaranteed regressions**.
 Add them to the tree as nodes immediately.
 
+**Golden master — mandatory if code has no or insufficient tests:**
+Add a node `[ ] Golden master on <module>` as a prerequisite of every refacto node touching that code.
+It is a **leaf** if an approval/snapshot lib is already available; a **intermediate node** if it requires
+installing a tool or creating a seam (Michael Feathers) first — those become its own children.
+
 ### Naive attempt procedure
 
 1. Create `docs/mikado/<goal>.mikado.md` with root only (graph wrapped in a ` ```text ` fence —
@@ -226,6 +231,7 @@ tree structure — are lost. The validator parses line by line and ignores fence
 
 1. ⚠️ **Gate 1 — Confirm Goal** (A/B). No file change until explicit A.
 2. ⚠️ **Pre-exploration audit** — grep for new concepts in tests. Add hidden deps to tree.
+   If target code lacks tests: add `[ ] Golden master on <module>` node before any refacto node (leaf or intermediate).
 3. Create `docs/mikado/<goal>.mikado.md` (root only) → **commit immediately**.
 4. **Per exploration cycle:**
    - Note HEAD SHA (`git rev-parse HEAD`).
