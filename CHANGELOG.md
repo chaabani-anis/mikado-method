@@ -5,6 +5,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/). Versioning: [SemVer](ht
 — MAJOR: breaks existing graphs or the validator contract · MINOR: new rules, sections, or checks
 · PATCH: doc fixes and rewording.
 
+## [1.2.0] - 2026-06-29
+
+### Added
+- **Golden master gate** — mandatory coverage checkpoint enforced before the first naive attempt.
+  Before committing the initial graph, coverage on the modules to be touched must be declared:
+  - Coverage < 80% or no test file → add `[ ] {GM} Golden master on <module>` to the tree.
+    Leaf if a snapshot/approval lib already exists; intermediate if the lib or a seam must be
+    created first (those become children of `{GM}`).
+  - Coverage ≥ 80% and test file exists → add `[no-golden-master: coverage X% on <module>]`
+    anywhere in the `.mikado.md` file.
+  `validate-mikado.sh` now **errors** when neither declaration is present (Pass 7). Pass 8
+  enumerates all true leaves and tags golden master leaves with `[GOLDEN MASTER GATE]` for the
+  Gate 3 readout — no more manual leaf counting.
+
 ## [1.1.0] - 2026-06-10
 
 ### Added
