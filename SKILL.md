@@ -4,7 +4,7 @@ description: Systematic approach for complex refactoring using dependency graphs
 license: MIT
 compatibility: claude-code, opencode, agents-md
 metadata:
-  version: 1.1.0
+  version: 1.2.0
   audience: developer
   workflow: refactoring
 ---
@@ -27,7 +27,8 @@ Present one pattern per cycle, not all upfront. If the user selects **B**, adjus
 updating the tree.
 
 **Gate 3 — Delegation level.** After exploration is complete and the tree is stable, present the
-full tree, list all true leaves, run `validate-mikado.sh` (must exit 0), then ask:
+full tree, run `validate-mikado.sh` (must exit 0 — its Pass 8 output lists all true leaves,
+golden master gates included with `[GOLDEN MASTER GATE]` tag), then ask:
 > "Exploration complete — N true leaves. Delegation level? (1 / 2 / 3)"
 
 Do not write any production code until the user answers.
@@ -128,10 +129,30 @@ grep -r "<new_concept>" tests/ src/
 Hidden fixtures that use the new concept as an "invalid" stand-in are **guaranteed regressions**.
 Add them to the tree as nodes immediately.
 
-**Golden master — mandatory if code has no or insufficient tests:**
-Add a node `[ ] Golden master on <module>` as a prerequisite of every refacto node touching that code.
-It is a **leaf** if an approval/snapshot lib is already available; a **intermediate node** if it requires
-installing a tool or creating a seam (Michael Feathers) first — those become its own children.
+**Golden master — mandatory gate, resolved BEFORE step 1 below (initial commit):**
+
+`validate-mikado.sh` **errors** if neither a `{GM}` node nor a `[no-golden-master: <reason>]`
+declaration is present. You must declare one before the first commit.
+
+1. Measure coverage on the modules you will touch:
+   ```bash
+   npx jest --coverage --coverageReporters=text-summary 2>/dev/null | grep -E "All files|<module>"
+   # Python: python -m pytest --cov=<module> --cov-report=term-missing 2>/dev/null | tail -5
+   ```
+   Insufficient = no test file for the module, OR line coverage < 80%, OR no test framework configured.
+2. **Choose exactly one option — both are mandatory validator declarations:**
+   - **If insufficient:** add `[ ] {GM} Golden master on <module>` to the tree **immediately**.
+     - **Leaf** if a snapshot/approval lib is already in the project (e.g. `jest`, `approvaltests`, `vitest`).
+     - **Intermediate** if the lib or a seam (Michael Feathers) must be created first — those become
+       children of `{GM}`, and they are the true leaves.
+     - **Placement:** `{GM}` is a child of the first refacto node that touches the under-tested module.
+       Every other refacto node targeting that same module must declare `requires: {GM}`.
+   - **If sufficient (coverage ≥ 80% and test file exists):** add
+     `[no-golden-master: coverage X% on <module>]` as a standalone line anywhere in the `.mikado.md`
+     file (outside the ` ```text ` fence). This declares the skip explicitly.
+3. Commit. Run `validate-mikado.sh` — must exit 0.
+4. At Gate 3: Pass 8 output lists all true leaves tagged `[GOLDEN MASTER GATE]`.
+   If `{GM}` is absent from that list when it has no pending children — stop and fix before proceeding.
 
 ### Naive attempt procedure
 
@@ -231,7 +252,12 @@ tree structure — are lost. The validator parses line by line and ignores fence
 
 1. ⚠️ **Gate 1 — Confirm Goal** (A/B). No file change until explicit A.
 2. ⚠️ **Pre-exploration audit** — grep for new concepts in tests. Add hidden deps to tree.
-   If target code lacks tests: add `[ ] Golden master on <module>` node before any refacto node (leaf or intermediate).
+   **Golden master gate (mandatory — validator errors without one of these):**
+   - Coverage < 80% or no test file: add `[ ] {GM} Golden master on <module>` as child of the first
+     refacto node; other nodes targeting that module declare `requires: {GM}`. Commit. Validate.
+   - Coverage ≥ 80% and test file exists: add `[no-golden-master: coverage X% on <module>]` anywhere
+     in the `.mikado.md` file. Commit. Validate.
+   Do not start naive attempts without one of these present in the file.
 3. Create `docs/mikado/<goal>.mikado.md` (root only) → **commit immediately**.
 4. **Per exploration cycle:**
    - Note HEAD SHA (`git rev-parse HEAD`).

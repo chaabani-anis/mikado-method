@@ -6,6 +6,8 @@ SHAs are fictional, so the git-history checks must be skipped with `--no-git`
 
 Run: `bash {{SKILL_DIR}}/validate-mikado.sh --no-git {{SKILL_DIR}}/sample.mikado.md` — expected exit 0.
 
+[no-golden-master: fixture only — no real module to measure, coverage check not applicable]
+
 The graph is wrapped in a fenced block so GitHub renders it verbatim; the
 validator ignores fence and prose lines.
 

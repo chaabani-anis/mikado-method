@@ -54,8 +54,9 @@ NODES_FILE="$TMPDIR_LOCAL/nodes"           # lines: "nid|indent|description"
 SHA_FILE="$TMPDIR_LOCAL/shas"             # lines: "nid|sha"
 REQUIRES_FILE="$TMPDIR_LOCAL/requires"   # lines: "from_nid|to_nid"
 PARENT_CHILD_FILE="$TMPDIR_LOCAL/pc"     # lines: "parent_nid|child_nid"
+STATUS_FILE="$TMPDIR_LOCAL/status"       # lines: "nid|pending" or "nid|done"
 
-touch "$NODES_FILE" "$SHA_FILE" "$REQUIRES_FILE" "$PARENT_CHILD_FILE"
+touch "$NODES_FILE" "$SHA_FILE" "$REQUIRES_FILE" "$PARENT_CHILD_FILE" "$STATUS_FILE"
 
 echo "=== Mikado Graph Validation: $TREE_FILE ==="
 echo ""
@@ -106,6 +107,12 @@ while IFS= read -r line; do
     fi
 
     echo "${nid}|${indent}|${desc}" >> "$NODES_FILE"
+
+    if [[ "$line" =~ \[[xX]\] ]]; then
+      echo "${nid}|done" >> "$STATUS_FILE"
+    else
+      echo "${nid}|pending" >> "$STATUS_FILE"
+    fi
 
     # Update indent stack: replace entry for this indent level
     grep -v "^${indent}|" "$INDENT_STACK_FILE" > "$TMPDIR_LOCAL/is_tmp" 2>/dev/null || true
@@ -369,6 +376,102 @@ while IFS='|' read -r nid indent desc; do
 done < "$NODES_FILE"
 
 [[ $ROOT_CHILD_COUNT -gt 0 ]] && log_ok "${ROOT_CHILD_COUNT} direct child(ren) of root"
+
+echo ""
+
+# -------------------------------------------------------
+# Pass 7 — Golden master gate
+# -------------------------------------------------------
+echo "--- Pass 7: Golden master gate ---"
+
+# Check for explicit [no-golden-master: <reason>] declaration (coverage already sufficient)
+NO_GM_DECLARED=0
+NO_GM_REASON=""
+while IFS= read -r line; do
+  if [[ "$line" =~ \[no-golden-master:[[:space:]]*(.+)\] ]]; then
+    NO_GM_DECLARED=1
+    NO_GM_REASON="${BASH_REMATCH[1]}"
+    break
+  fi
+done < "$TREE_FILE"
+
+GM_FOUND=0
+while IFS='|' read -r nid indent desc; do
+  if echo "$desc" | grep -qi "golden master" || echo "$nid" | grep -qi "^gm"; then
+    GM_FOUND=1
+    node_status=$(grep "^${nid}|" "$STATUS_FILE" | cut -d'|' -f2)
+
+    # Count pending children via parent-child tree
+    pending_children=0
+    while IFS='|' read -r parent_nid child_nid; do
+      if [[ "$parent_nid" == "$nid" ]]; then
+        child_status=$(grep "^${child_nid}|" "$STATUS_FILE" | cut -d'|' -f2)
+        if [[ "${child_status:-pending}" == "pending" ]]; then
+          pending_children=$(( pending_children + 1 ))
+        fi
+      fi
+    done < "$PARENT_CHILD_FILE"
+
+    if [[ "${node_status:-pending}" == "done" ]]; then
+      log_ok "{${nid}} Golden master DONE"
+    elif [[ $pending_children -eq 0 ]]; then
+      log_ok "{${nid}} Golden master is a TRUE LEAF (no pending children) — will appear in Pass 8 leaf list"
+    else
+      log_ok "{${nid}} Golden master is intermediate (${pending_children} pending child(ren) are the true leaves)"
+    fi
+  fi
+done < "$NODES_FILE"
+
+if [[ $GM_FOUND -eq 0 ]]; then
+  if [[ $NO_GM_DECLARED -eq 1 ]]; then
+    log_ok "No golden master node — coverage declared sufficient: ${NO_GM_REASON}"
+  else
+    log_error "No golden master node and no [no-golden-master: <reason>] declaration. Measure coverage on touched modules: if line coverage < 80% or no test file exists, add '[ ] {GM} Golden master on <module>' to the tree. If coverage is already >= 80%, add '[no-golden-master: coverage X% on <module>]' anywhere in this file."
+  fi
+fi
+
+echo ""
+
+# -------------------------------------------------------
+# Pass 8 — True leaf enumeration (Gate 3 ready-list)
+# -------------------------------------------------------
+echo "--- Pass 8: True leaf enumeration (Gate 3 ready-list) ---"
+
+PENDING_COUNT=$(grep "|pending$" "$STATUS_FILE" 2>/dev/null | wc -l | tr -d ' ')
+TRUE_LEAF_COUNT=0
+
+while IFS='|' read -r nid indent desc; do
+  node_status=$(grep "^${nid}|" "$STATUS_FILE" | cut -d'|' -f2)
+  [[ "${node_status:-pending}" == "done" ]] && continue
+
+  has_pending_child=0
+  while IFS='|' read -r parent_nid child_nid; do
+    if [[ "$parent_nid" == "$nid" ]]; then
+      child_status=$(grep "^${child_nid}|" "$STATUS_FILE" | cut -d'|' -f2)
+      if [[ "${child_status:-pending}" == "pending" ]]; then
+        has_pending_child=1
+        break
+      fi
+    fi
+  done < "$PARENT_CHILD_FILE"
+
+  if [[ $has_pending_child -eq 0 ]]; then
+    TRUE_LEAF_COUNT=$(( TRUE_LEAF_COUNT + 1 ))
+    gm_tag=""
+    if echo "$desc" | grep -qi "golden master" || echo "$nid" | grep -qi "^gm"; then
+      gm_tag=" [GOLDEN MASTER GATE]"
+    fi
+    log_ok "Leaf ${TRUE_LEAF_COUNT}: {${nid}} ${desc:0:55}${gm_tag}"
+  fi
+done < "$NODES_FILE"
+
+if [[ $PENDING_COUNT -eq 0 ]]; then
+  log_ok "All nodes complete — no pending leaves"
+elif [[ $TRUE_LEAF_COUNT -eq 0 ]]; then
+  log_error "No true leaves found but ${PENDING_COUNT} pending node(s) exist — possible requires: cycle or parse error"
+else
+  log_ok "${TRUE_LEAF_COUNT} true leaf(ves) ready — present this list at Gate 3"
+fi
 
 echo ""
 
