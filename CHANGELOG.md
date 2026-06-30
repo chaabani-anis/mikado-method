@@ -5,6 +5,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/). Versioning: [SemVer](ht
 — MAJOR: breaks existing graphs or the validator contract · MINOR: new rules, sections, or checks
 · PATCH: doc fixes and rewording.
 
+## [1.2.1] - 2026-06-30
+
+### Fixed
+- `validate-mikado.sh` no longer crashes under `set -euo pipefail` when all nodes are done:
+  `grep "|pending$"` returning exit 1 on an empty match now correctly sets `PENDING_COUNT=0`
+  instead of aborting the script.
+
 ## [1.2.0] - 2026-06-29
 
 ### Added
