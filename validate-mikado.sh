@@ -437,7 +437,7 @@ echo ""
 # -------------------------------------------------------
 echo "--- Pass 8: True leaf enumeration (Gate 3 ready-list) ---"
 
-PENDING_COUNT=$(grep "|pending$" "$STATUS_FILE" 2>/dev/null | wc -l | tr -d ' ')
+PENDING_COUNT=$(grep "|pending$" "$STATUS_FILE" 2>/dev/null | wc -l | tr -d ' ') || PENDING_COUNT=0
 TRUE_LEAF_COUNT=0
 
 while IFS='|' read -r nid indent desc; do
