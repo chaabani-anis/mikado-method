@@ -1,64 +1,62 @@
 # mikado-method
 
-An agent skill implementing the **Mikado Method**: systematic large-scale refactoring using a
-dependency graph, leaf-first execution, and revert-on-failure — the codebase stays shippable
-at every step.
-
-## What's in the box
-
-| File | Role |
-|---|---|
-| `SKILL.md` | The skill: prime rules, confirmation gates, exploration/execution workflow |
-| `EXAMPLE.md` | Complete worked example (billing service / notification gateway) |
-| `sample.mikado.md` | Minimal valid graph, used as validator fixture |
-| `validate-mikado.sh` | 6-pass graph validator (mandatory gate in the workflow) |
-| `install.sh` | Multi-tool installer |
+An agent skill that makes AI coding agents apply the **Mikado Method** to large refactorings:
+dependency graph, code-free exploration, leaf-first execution, revert on failure.
 
 ## Installation
 
-```bash
-# Claude Code — current project          # Claude Code — all projects
-./install.sh claude                      ./install.sh claude --global
-
-# opencode — current project             # opencode — all projects
-./install.sh opencode                    ./install.sh opencode --global
-
-# AGENTS.md tools (Codex, Cursor, Copilot coding agent, Gemini CLI, ...)
-./install.sh agents --project /path/to/repo
-```
-
-| Target | Installs to |
-|---|---|
-| `claude` (project) | `.claude/skills/mikado-method/` |
-| `claude --global` | `~/.claude/skills/mikado-method/` |
-| `opencode` (project) | `.opencode/skills/mikado-method/` |
-| `opencode --global` | `~/.config/opencode/skills/mikado-method/` |
-| `agents` | Marked section in `AGENTS.md` + full skill in `docs/mikado/tools/` |
-
-Options: `--project <dir>` (default: current directory) · `--force` (overwrite local
-modifications or reinstall same version) · `--uninstall`.
-
-The installer is idempotent: re-running with the same version is a no-op, upgrades replace
-files, and locally modified installations are never overwritten without `--force`.
-
-## Quick start
-
-Once installed, ask your agent to refactor something cross-cutting. The skill drives it through:
-1. **Gate 1** — goal reformulated in business-value terms, confirmed by you
-2. **Exploration** — naive attempts, failures captured as graph nodes, code reverted each cycle
-3. **Gate 3** — delegation level (you implement / agent implements leaf-by-leaf / autonomous)
-4. **Execution** — true leaves first, TDD per leaf, one atomic commit per node
-
-Graphs live in `docs/mikado/<goal>.mikado.md`. Validate one manually:
+Requires `bash` 3.2+ and `git`.
 
 ```bash
-bash <skill-dir>/validate-mikado.sh docs/mikado/<goal>.mikado.md
+git clone https://github.com/chaabani-anis/mikado-method && cd mikado-method
+
+./install.sh claude   --project <repo>   # Claude Code → <repo>/.claude/skills/mikado-method/
+./install.sh claude   --global           #               ~/.claude/skills/mikado-method/
+./install.sh opencode --project <repo>   # opencode    → <repo>/.opencode/skills/mikado-method/
+./install.sh opencode --global           #               ~/.config/opencode/skills/mikado-method/
+./install.sh agents   --project <repo>   # Codex, Cursor, Copilot, Gemini CLI… → section in AGENTS.md
+                                         #   + skill files in <repo>/docs/mikado/tools/
 ```
 
-## Versioning
+`--project` defaults to the current directory. `--force` overwrites local changes, `--uninstall`
+removes the skill. Re-running is safe; each install ends with a validator smoke test.
 
-Single source of truth: `metadata.version` in the `SKILL.md` frontmatter, mirrored by git tags
-(`v1.0.0`). See `CHANGELOG.md` for the policy and history.
+Other tools: copy `SKILL.md`, `EXAMPLE.md`, `validate-mikado.sh` and `sample.mikado.md` into the
+project, replace `{{SKILL_DIR}}` with their folder, and reference `SKILL.md` in the tool's
+instructions file.
+
+## Usage
+
+Ask your agent for a cross-cutting refactoring, phrased as a goal. The skill takes over. Graphs
+are written to `docs/mikado/<goal>.mikado.md`; to check one yourself:
+
+```bash
+bash <install-dir>/validate-mikado.sh docs/mikado/<goal>.mikado.md
+```
+
+## How the skill works
+
+**Gates:** the agent stops for your decision.
+- **Gate 1:** confirm the goal, restated in business value, before any file change.
+- **Gate 2:** accept or reject each refactoring pattern the exploration calls for.
+- **Gate 3:** choose the delegation level: you implement, agent leaf by leaf, or autonomous.
+- **Golden master** (checked by the validator): below 80% coverage, characterization tests
+  come first.
+
+**Rules:** exploration writes no production code (every attempt is reverted) · one atomic commit
+per leaf · children before parents · `validate-mikado.sh` must pass after every graph change.
+
+**Files:** `SKILL.md` (the skill) · `EXAMPLE.md` (worked example) · `validate-mikado.sh`
+(8-pass graph validator) · `sample.mikado.md` (validator fixture) · `install.sh` ·
+`CHANGELOG.md`.
+
+## Articles
+
+| | English | Français |
+|---|---|---|
+| Why | [Taming Agentic Refactoring with the Mikado Method](https://anischaabani.com/en/blog/mikado-method-ai-agents) | [Domptez vos refactorings agentiques avec la Mikado Method](https://anischaabani.com/blog/mikado-method-ai-agents) |
+| The skill | [The Skill That Turns the Method into Non-Negotiable Rules](https://anischaabani.com/en/blog/mikado-method-skill) | [Le skill qui transforme la méthode en règles non négociables](https://anischaabani.com/blog/mikado-method-skill) |
+| Case study | [An Agent Refactoring Replayable Commit by Commit](https://anischaabani.com/en/blog/mikado-method-example) | [Un refactoring d'agent rejouable commit par commit](https://anischaabani.com/blog/mikado-method-example) |
 
 ## License
 
